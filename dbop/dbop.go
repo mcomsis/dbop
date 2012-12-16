@@ -20,33 +20,32 @@ type Table interface {
 	SetFieldValue(fieldName string, fieldValue string) bool
 }
 
-/*
-type DateTime struct {
-	day		int
-	month	int
-	year	int
-	hour	int
-	minute	int
-	second	int
+func ToStmtStr(value string, valueType string) string {
+	switch valueType {
+		case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT", "DOUBLE", "FLOAT", "YEAR":
+			return value
+			
+		case "DATE","DATETIME", "TIMESTAPM", "TIME", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
+			return fmt.Sprintf("'%s'",value)
+	}
+	
+	return ""
 }
-*/
-/*
-func (dateTime DateTime) ToStmtStr() string {
-	return fmt.Sprintf("'%i-%i-%i %i:%i:%i'", dateTime.year, dateTime.month, dateTime.day, dateTime.hour, dateTime.minute, dateTime.second) //2012-12-10 22:03:27
-}
-*/
+
 
 type DbTable struct {
-	tableName 	string
-	fieldNames	[]string
-	fieldTypes	[]string
-	fieldValue 	[]string
+	tableName 		string
+	fieldNames		[]string
+	fieldTypes		[]string
+	fieldValue 		[]string
+	fieldValueSet 	[]bool
 }
 
 func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string) {
 	t.tableName = tableName
 	t.fieldNames = fieldNames
 	t.fieldTypes = fieldTypes
+	t.fieldValueSet = make([]bool, len(fieldTypes))
 }
 
 func (t *DbTable) ResetTable() {
@@ -90,9 +89,31 @@ func (t *DbTable) SetFieldValue(fieldName string, fieldValue string) bool {
 }
 
 type DbConnection struct {
-	
-
+	connection *sql.DB
 }
+
+func (dbc *DbConnection) Open(connectionStr string) {
+	con, err := sql.Open("mymysql", connectionStr)
+	
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+	
+	dbc.connection = con
+}
+
+func (dbc *DbConnection) Exec(queryStr string) int64 {
+	result, err := dbc.connection.Exec(string)
+	
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+	
+	rowsAffected, _ := result.RowsAffected()
+	
+	return rowsAffected
+}
+
 
 func DoStuff(t Table) int {
 	return 1

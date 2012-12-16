@@ -28,46 +28,17 @@ func newUsersTable() dbop.DbTable {
 	usersTable.InitTable("Users", fieldNames, fieldTypes)
 	return usersTable
 }
-/*
-type zzint interface {
-	AddBtoA()
-}
-
-type zz struct {
-	A int
-	B int
-}
-
-func (z *zz) AddBtoA () {
-	z.A = z.A + z.B
-}
-
-func doall(zi zzint) {
-	zi.AddBtoA()
-}
 
 func main() {
-	var z zz
-	z.A = 1
-	z.B = 2
+	var dbcon dbop.DbConnection
+	dbcon.Open(dbString)
 	
-	doall(z)
-	
-	fmt.Printf("%i",z.A)
-*/
-func main() {
 	usersTable := newUsersTable()
+	
 	ret := dbop.DoStuff(&usersTable)
-	fmt.Printf("returned %i\n", ret)
-	con, err := sql.Open("mymysql", dbString)
+	fmt.Printf("returned %s\n", ret)
 	
-	if err != nil {
-		fmt.Printf("Error str %s", err)
-	}
-	
-	_, err = con.Exec("insert into Users (name, registered, role, rating) values ('zaraza', '2012-12-10 22:03:27', 1, 1.1)")
-	
-	//fmt.Printf("package %n", i)
-	
+	rows := dbcon.Exec("insert into Users (name, registered, role, rating) values ('zaraza', '2012-12-10 22:03:27', 1, 1.1)")
+	fmt.Printf("affected rows %s\n", rows)
 }
 
