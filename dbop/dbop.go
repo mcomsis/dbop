@@ -103,7 +103,7 @@ func (dbc *DbConnection) Open(connectionStr string) {
 }
 
 func (dbc *DbConnection) Exec(queryStr string) int64 {
-	result, err := dbc.connection.Exec(string)
+	result, err := dbc.connection.Exec(queryStr)
 	
 	if err != nil {
 		fmt.Printf("%s\n", err)
