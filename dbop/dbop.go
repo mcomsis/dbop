@@ -38,7 +38,7 @@ type DbTable struct {
 	fieldNames		[]string
 	fieldTypes		[]string
 	fieldValue 		[]string
-	fieldValueSet 	[]bool
+	fieldValueSet 		[]bool
 }
 
 func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string) {
@@ -81,11 +81,19 @@ func (t *DbTable) SetFieldValue(fieldName string, fieldValue string) bool {
 	for fId, fn := range t.fieldNames {
 		if fieldName == fn {
 			t.fieldValue[fId] = fieldValue
+			t.fieldValueSet[fId] = true
 			return true;
 		}
 	}
 	
 	return false
+}
+
+func (t *DbTable) ClearFields() {
+	for fId = 1; fId <= len(t.fieldValue); fId++ {
+		t.fieldValue[fId] = ""
+		t.fieldValueSet[fId] = false
+	}
 }
 
 type DbConnection struct {
