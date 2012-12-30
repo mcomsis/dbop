@@ -10,20 +10,22 @@ const dbString = "test/root/"
 func newUsersTable() dbop.DbTable {
 	var usersTable dbop.DbTable
 	
-	fieldNames := make([]string, 5)
-	fieldTypes := make([]string, 5)
+	fieldNames := make([]string, 6)
+	fieldTypes := make([]string, 6)
 	
 	fieldNames[0] = "id"
 	fieldNames[1] = "name"
 	fieldNames[2] = "registered"
 	fieldNames[3] = "role"
 	fieldNames[4] = "rating"
+	fieldNames[5] = "yr"
 	
 	fieldTypes[0] = "BIGINT"
 	fieldTypes[1] = "VARCHAR"
 	fieldTypes[2] = "DATETIME"
 	fieldTypes[3] = "SMALLINT"
 	fieldTypes[4] = "FLOAT"
+	fieldTypes[5] = "YEAR"
 	
 	usersTable.InitTable("Users", fieldNames, fieldTypes)
 	return usersTable
@@ -35,10 +37,37 @@ func main() {
 	
 	usersTable := newUsersTable()
 	
-	ret := dbop.DoStuff(&usersTable)
-	fmt.Printf("returned %s\n", ret)
+	//usersTable.SetFieldValue("id","19")
+	//usersTable.SetFieldValue("name","zaraza")
+	//usersTable.ClearField("id")
 	
-	rows := dbcon.Exec("insert into Users (name, registered, role, rating) values ('zaraza', '2012-12-10 22:03:27', 1, 1.1)")
-	fmt.Printf("affected rows %s\n", rows)
+	//res := usersTable.DoSelectFirstonly(&dbcon)
+	
+	/*
+	
+	if res {
+		fmt.Printf("ok\n")
+	} else {
+		fmt.Printf("nok\n") 
+	}
+	
+	
+	val := usersTable.GetFieldValue("registered")
+	*/
+	
+	//var usersTableList []dbop.DbTable
+	
+	usersTableList, err := usersTable.DoSelect(&dbcon)
+	
+	if err != nil {
+		panic (err) 
+	}
+	
+	for id := range usersTableList {
+		name := usersTableList[id].GetFieldValue("name")
+		fmt.Printf("name = %s, id = %s\n", name, id)
+	} 
+	
+	fmt.Printf("kaut kas\n") 
 }
 
