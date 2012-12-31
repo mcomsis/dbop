@@ -233,6 +233,7 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 			t.fieldValueSet[fId] = false						
 		}
 		
+		/*
 		newRetRows := make([]DbTable, len(retRows)+1)
 		id := 0
 		
@@ -244,7 +245,9 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		newRetRows[id] = t // TODO te kaut kas nenotiek
 		
 		retRows = newRetRows
+		*/
 		
+		retRows := append(retRows, t)
 		counter++
 	}
 	
