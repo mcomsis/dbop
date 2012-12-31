@@ -64,8 +64,8 @@ func main() {
 	}
 	
 	for id := range usersTableList {
-		name := usersTableList[id].GetFieldValue("name")
-		fmt.Printf("name = %s, id = %s\n", name, id)
+		recid := usersTableList[id].GetFieldValue("name")
+		fmt.Printf("name = %s, id = %s\n", recid, id)
 	} 
 	
 	fmt.Printf("kaut kas\n") 

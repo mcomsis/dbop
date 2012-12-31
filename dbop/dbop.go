@@ -49,6 +49,22 @@ func anytypeToStr(value interface{}) string {
 	return ""
 }
 
+func (t DbTable) newTableInstance() DbTable {
+	var tbl 		DbTable
+	var fieldNames	[]string
+	var fieldTypes 	[]string
+	
+	fieldNames = make([]string, len(t.fieldNames))
+	copy(fieldNames, t.fieldNames)
+	
+	fieldTypes = make([]string, len(t.fieldTypes))
+	copy(fieldTypes, t.fieldTypes)
+	
+	tbl.InitTable(t.tableName, fieldNames, fieldTypes)
+	
+	return tbl;
+}
+
 // Defines the database table base type
 type DbTable struct {
 	tableName 		string
@@ -234,43 +250,31 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	
 	if err != nil {
 		return nil, err
-	}
-	
-	fields := make([]interface{}, len(t.fieldNames))
-	fieldValues := make([]*interface{}, len(t.fieldNames))
-	
-	for fId := range fields {
-		fields[fId] = &fieldValues[fId]
-	}
+	}	
 		
 	for rows.Next() {
+		fields := make([]interface{}, len(t.fieldNames))
+		fieldValues := make([]*interface{}, len(t.fieldNames))
+		
+		for fId := range fields {
+			fields[fId] = &fieldValues[fId]
+		}
+	
 		err := rows.Scan(fields...)		
 		
 		if err != nil {
 			return nil, err
 		}
 		
+		tableRow := t.newTableInstance()
+		
 		for fId := range fieldValues {
-			value := *fieldValues[fId]
-			t.fieldValue[fId] = anytypeToStr(value)
-			t.fieldValueSet[fId] = false						
+			value := *fieldValues[fId]			
+			tableRow.fieldValue[fId] = anytypeToStr(value)
+			tableRow.fieldValueSet[fId] = false						
 		}
-		
-		/*
-		newRetRows := make([]DbTable, len(retRows)+1)
-		id := 0
-		
-		for id < len(retRows) && len(retRows) > 0 {
-			newRetRows[id] = retRows[id] 
-			id++
-		}
-		
-		newRetRows[id] = t // TODO te kaut kas nenotiek
-		
-		retRows = newRetRows
-		*/
-		
-		retRows := append(retRows, t)
+				
+		retRows = append(retRows, tableRow)
 		counter++
 	}
 	
