@@ -1,3 +1,6 @@
+// Package dbop includes the most commonly used db operations - select, insert, delete
+// in an easy to use manner without the need to use or know anything about the underlying 
+// sql queries.
 package dbop
 
 import (
@@ -17,7 +20,7 @@ type Table interface {
 	SetFieldValue(fieldName string, fieldValue string) bool
 }
 
-func ToStmtStr(value string, valueType string) string {
+func toStmtStr(value string, valueType string) string {
 	switch valueType {
 		case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT", "DOUBLE", "YEAR":
 			return value
@@ -29,7 +32,7 @@ func ToStmtStr(value string, valueType string) string {
 	return ""
 }
 
-func AnytypeToStr(value interface{}) string {
+func anytypeToStr(value interface{}) string {
 	switch value.(type) {
 		case int, int8, int16, int32, int64:
 			return strconv.FormatInt(value.(int64),10)
@@ -46,7 +49,7 @@ func AnytypeToStr(value interface{}) string {
 	return ""
 }
 
-
+// Defines the database table base type
 type DbTable struct {
 	tableName 		string
 	fieldNames		[]string
@@ -55,6 +58,7 @@ type DbTable struct {
 	fieldValueSet   []bool
 }
 
+// Initiates the base type with info from a specific table in the database.
 func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string) {
 	t.tableName 	= tableName
 	t.fieldNames 	= fieldNames
@@ -63,24 +67,29 @@ func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []
 	t.fieldValueSet = make([]bool, len(fieldTypes))
 }
 
+// Resets the table variable for initiating as a different database table
 func (t *DbTable) ResetTable() {
 	t.tableName = ""
 	t.fieldNames = nil
 	t.fieldTypes = nil
 }
 
+// Returns a slice of all the field names for the initiated table
 func (t DbTable) GetFieldNameList() []string {
 	return t.fieldNames
 }
 
+// Returns a slice of all the field types for the initiated table
 func (t DbTable) GetFieldTypeList() []string {
 	return t.fieldTypes
 }
 
+// Returns a the table name of the initiated table
 func (t DbTable) GetTableName() string {
 	return t.tableName
 }
 
+// Returns the value of a field specified by the field name
 func (t DbTable) GetFieldValue(fieldName string) string {
 	for fId, fn := range t.fieldNames {
 		if fieldName == fn {
@@ -91,6 +100,7 @@ func (t DbTable) GetFieldValue(fieldName string) string {
 	return ""
 }
 
+// Sets the value of a field
 func (t *DbTable) SetFieldValue(fieldName string, fieldValue string) bool {
 	for fId, fn := range t.fieldNames {
 		if fieldName == fn {
@@ -103,6 +113,7 @@ func (t *DbTable) SetFieldValue(fieldName string, fieldValue string) bool {
 	return false
 }
 
+// Clears all field values
 func (t *DbTable) ClearFields() {
 	for fId := 0; fId < len(t.fieldValue); fId++ {
 		t.fieldValue[fId] = ""
@@ -110,6 +121,7 @@ func (t *DbTable) ClearFields() {
 	}
 }
 
+// Clears the value of a field specified by the field name
 func (t *DbTable) ClearField(fieldName string) bool {
 	for fId, fn := range t.fieldNames {
 		if fieldName == fn {
@@ -122,10 +134,12 @@ func (t *DbTable) ClearField(fieldName string) bool {
 	return false
 }
 
+// Database connection type used when executing a db operation
 type DbConnection struct {
 	connection *sql.DB
 }
 
+// Opens a database connection
 func (dbc *DbConnection) Open(connectionStr string) {
 	con, err := sql.Open("mymysql", connectionStr)
 	
@@ -136,6 +150,7 @@ func (dbc *DbConnection) Open(connectionStr string) {
 	dbc.connection = con
 }
 
+// Executes a custom sql statement
 func (dbc *DbConnection) Exec(queryStr string) int64 {
 	result, err := dbc.connection.Exec(queryStr)
 	
@@ -161,7 +176,7 @@ func (t *DbTable) buildSelectStr(firstonly bool) string {
 			if len(whereStr) != 0 {
 				whereStr = whereStr + " AND "
 			}
-			whereStr = whereStr + t.tableName + "." + t.fieldNames[fId] + " = " + ToStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
+			whereStr = whereStr + t.tableName + "." + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
 			
 		}
 	}
@@ -177,6 +192,10 @@ func (t *DbTable) buildSelectStr(firstonly bool) string {
 	return selectStr
 }
 
+// Builds and executes a select statement based on the field values that have been set using
+// using the SetFieldValue() function. Will return true if successfull and will populate the 
+// field values for the variable called from. All fields returned by the db will be populated,
+// but fields will be considered not set. Selects only the first line from the table.
 func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
 	row := dbc.connection.QueryRow(t.buildSelectStr(true))
 	
@@ -196,13 +215,17 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
 	
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
-		t.fieldValue[fId] = AnytypeToStr(value)
+		t.fieldValue[fId] = anytypeToStr(value)
 		t.fieldValueSet[fId] = false
 	}
 	
 	return true
 }
 
+// Builds and executes a select statement based on the field values that have been set using
+// using the SetFieldValue() function. Will return a slice of DbTable objects that represent
+// the selected table rows. If no lines are found, will return a 0 sized slice. Will return 
+// nil value and an error if a problem was encountered.
 func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	var retRows 	[]DbTable
 	var counter		int
@@ -229,7 +252,7 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
-			t.fieldValue[fId] = AnytypeToStr(value)
+			t.fieldValue[fId] = anytypeToStr(value)
 			t.fieldValueSet[fId] = false						
 		}
 		
