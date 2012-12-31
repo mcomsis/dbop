@@ -56,7 +56,7 @@ func main() {
 	*/
 	
 	//var usersTableList []dbop.DbTable
-	
+	/*
 	usersTableList, err := usersTable.DoSelect(&dbcon)
 	
 	if err != nil {
@@ -67,6 +67,16 @@ func main() {
 		recid := usersTableList[id].GetFieldValue("name")
 		fmt.Printf("name = %s, id = %s\n", recid, id)
 	} 
+	*/
+	
+	usersTable.SetFieldValue("name", "omgomg")
+	r, err := usersTable.DoInsert(&dbcon)
+	
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	} else {
+		fmt.Printf("%s\n", r)
+	}
 	
 	fmt.Printf("kaut kas\n") 
 }

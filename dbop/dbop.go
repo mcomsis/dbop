@@ -167,16 +167,16 @@ func (dbc *DbConnection) Open(connectionStr string) {
 }
 
 // Executes a custom sql statement
-func (dbc *DbConnection) Exec(queryStr string) int64 {
+func (dbc *DbConnection) Exec(queryStr string) (int64, error) {
 	result, err := dbc.connection.Exec(queryStr)
 	
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		return 0, err
 	}
 	
 	rowsAffected, _ := result.RowsAffected()
 	
-	return rowsAffected
+	return rowsAffected, nil
 }
 
 func (t *DbTable) buildSelectStr(firstonly bool) string {
@@ -281,4 +281,49 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	rows.Close()
 	
 	return retRows, nil	
+}
+
+func (t DbTable) buildInsertStr() (string, error) {
+	var stmtStr		string
+	var stmtFields 	string
+	var stmtValues	string
+	
+	stmtStr = "INSERT INTO " + t.tableName + " "
+	
+	for fId := range t.fieldNames {
+		if t.fieldValueSet[fId] {
+			if len(stmtFields) == 0 {
+				stmtFields = stmtFields + "("
+				stmtValues = stmtValues + "("
+			} else {
+				stmtFields = stmtFields + ","
+				stmtValues = stmtValues + ","
+			}
+			
+			stmtFields = stmtFields + t.fieldNames[fId]
+			stmtValues = stmtValues + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
+		}
+	}
+	
+	if len(stmtFields) == 0 {
+		return "", fmt.Errorf("No fields set!")
+	} else {
+		stmtFields = stmtFields + ")"
+		stmtValues = stmtValues + ")"
+	}
+	
+	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
+	
+	return stmtStr, nil
+}
+
+// Builds anx executes an insert statement from the set field values
+func (t DbTable) DoInsert(dbc *DbConnection) (int64, error) {
+	stmtStr, err := t.buildInsertStr()
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return dbc.Exec(stmtStr)
 }
