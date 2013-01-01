@@ -49,20 +49,11 @@ func anytypeToStr(value interface{}) string {
 	return ""
 }
 
-func (t DbTable) newTableInstance() DbTable {
-	var tbl 		DbTable
-	var fieldNames	[]string
-	var fieldTypes 	[]string
-	
-	fieldNames = make([]string, len(t.fieldNames))
-	copy(fieldNames, t.fieldNames)
-	
-	fieldTypes = make([]string, len(t.fieldTypes))
-	copy(fieldTypes, t.fieldTypes)
-	
-	tbl.InitTable(t.tableName, fieldNames, fieldTypes)
-	
-	return tbl;
+type RecId struct {
+	Value 	int64
+	Exists 	bool
+	AutoInc bool
+	IsSet	bool
 }
 
 // Defines the database table base type
@@ -72,22 +63,81 @@ type DbTable struct {
 	fieldTypes		[]string
 	fieldValue 		[]string
 	fieldValueSet   []bool
+	recid			RecId
+}
+
+// Returns the recid value of the table and the IsSet value. IsSet will be true if the 
+// value has been set and not read, it will be false if the value is empty or has been read from db
+// The methd will panic if recid does not exist for this table.
+func (t DbTable) RecId() (int64, bool) {
+	if !t.recid.Exists {
+		panic ("Rec id doesn't exist for this table")
+	}
+	
+	return t.recid.Value, t.recid.IsSet
+}
+
+// Sets the value for recid to be used when executing db operations. This value will be included in ther
+// where clause. If 0 is passed in, the method will clear the recid value. This method also must be used
+// if recid field is not set as auto_increment in the database and must be maintained in the application.
+// The methd will panic if recid does not exist for this table.
+func (t *DbTable) SetRecId(recId int64) {
+	if !t.recid.Exists {
+		panic ("Rec id dosn't exist for this table")
+	}
+	
+	if recId != 0 {
+		t.recid.Value = recId
+		t.recid.IsSet = true
+	} else {
+		t.recid.Value = recId
+		t.recid.IsSet = false
+	}
+}
+
+func (t DbTable) newTableInstance() DbTable {
+	var tbl 		DbTable
+	var fieldNames	[]string
+	var fieldTypes 	[]string
+	var recid		[2]bool
+	
+	fieldNames = make([]string, len(t.fieldNames))
+	copy(fieldNames, t.fieldNames)
+	
+	fieldTypes = make([]string, len(t.fieldTypes))
+	copy(fieldTypes, t.fieldTypes)
+	
+	recid[0] = t.recid.Exists
+	recid[1] = t.recid.AutoInc
+	
+	tbl.InitTable(t.tableName, fieldNames, fieldTypes, recid)
+	
+	return tbl;
 }
 
 // Initiates the base type with info from a specific table in the database.
-func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string) {
+// recid is a field and a unique index for that field that can be created on the table
+// for easily performing DoUpdate and DoDelete operations after selecting a single record
+func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string, recid [2]bool) {
 	t.tableName 	= tableName
 	t.fieldNames 	= fieldNames
 	t.fieldTypes 	= fieldTypes
 	t.fieldValue 	= make([]string, len(fieldTypes))
 	t.fieldValueSet = make([]bool, len(fieldTypes))
+	t.recid.Exists	= recid[0]
+	if t.recid.Exists {
+		t.recid.AutoInc = recid[1]
+	}
 }
 
 // Resets the table variable for initiating as a different database table
 func (t *DbTable) ResetTable() {
-	t.tableName = ""
-	t.fieldNames = nil
-	t.fieldTypes = nil
+	t.tableName 	= ""
+	t.fieldNames 	= nil
+	t.fieldTypes 	= nil
+	t.recid.AutoInc = false
+	t.recid.Exists	= false
+	t.recid.Value 	= 0
 }
 
 // Returns a slice of all the field names for the initiated table
@@ -197,6 +247,13 @@ func (t *DbTable) buildSelectStr(firstonly bool) string {
 		}
 	}
 	
+	if t.recid.Exists && t.recid.IsSet {
+		if len(whereStr) != 0 {
+			whereStr = whereStr + " AND "
+		}
+		whereStr = whereStr + t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
+	}
+	
 	if hasWhere {
 		selectStr = selectStr + " WHERE " + whereStr
 	}
@@ -231,8 +288,13 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
 	
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
-		t.fieldValue[fId] = anytypeToStr(value)
-		t.fieldValueSet[fId] = false
+		if t.recid.Exists && fId == 1 {
+			t.recid.Value = value.(int64)
+			t.recid.IsSet = false
+		} else {
+			t.fieldValue[fId] = anytypeToStr(value)
+			t.fieldValueSet[fId] = false
+		}
 	}
 	
 	return true
@@ -269,9 +331,14 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		tableRow := t.newTableInstance()
 		
 		for fId := range fieldValues {
-			value := *fieldValues[fId]			
-			tableRow.fieldValue[fId] = anytypeToStr(value)
-			tableRow.fieldValueSet[fId] = false						
+			value := *fieldValues[fId]
+			if t.recid.Exists && fId == 1 {
+				t.recid.Value = value.(int64)
+				t.recid.IsSet = false
+			} else {
+				t.fieldValue[fId] = anytypeToStr(value)
+				t.fieldValueSet[fId] = false
+			}
 		}
 				
 		retRows = append(retRows, tableRow)
@@ -303,6 +370,11 @@ func (t DbTable) buildInsertStr() (string, error) {
 			stmtFields = stmtFields + t.fieldNames[fId]
 			stmtValues = stmtValues + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
 		}
+	}
+	
+	if t.recid.Exists && !t.recid.AutoInc {
+		stmtFields = stmtFields + "recid, "
+		stmtValues = stmtFields + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
 	}
 	
 	if len(stmtFields) == 0 {
