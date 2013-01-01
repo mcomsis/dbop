@@ -26,7 +26,7 @@ func toStmtStr(value string, valueType string) string {
 			return value
 			
 		case "DATE","DATETIME", "TIMESTAPM", "TIME", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
-			return fmt.Sprintf("'%s'",value)
+			return "'" + value + "'"
 	}
 	
 	return ""
@@ -43,7 +43,7 @@ func anytypeToStr(value interface{}) string {
 		case bool:
 			return strconv.FormatBool(value.(bool))
 		default:
-			return fmt.Sprintf("%s", value)
+			return fmt.Sprintf("%v", value)
 	}
 	
 	return ""
@@ -210,7 +210,7 @@ func (dbc *DbConnection) Open(connectionStr string) {
 	con, err := sql.Open("mymysql", connectionStr)
 	
 	if err != nil {
-		fmt.Printf("%s\n", err)
+		panic(err)
 	}
 	
 	dbc.connection = con
@@ -229,7 +229,11 @@ func (dbc *DbConnection) Exec(queryStr string) (int64, error) {
 	return rowsAffected, nil
 }
 
-func (t *DbTable) buildSelectStr(firstonly bool) string {
+func (dbc *DbConnection) QueryRow(queryStr string) Row {
+// TODO build this
+}
+
+func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 	var selectStr 	string
 	var whereStr 	string
 	var hasWhere 	bool
@@ -262,18 +266,27 @@ func (t *DbTable) buildSelectStr(firstonly bool) string {
 		selectStr = selectStr + " LIMIT 1"
 	}
 	
-	return selectStr
+	// TODO testing
+	fmt.Printf("%v\n", selectStr)
+	
+	return selectStr, nil
 }
 
 // Builds and executes a select statement based on the field values that have been set using
 // using the SetFieldValue() function. Will return true if successfull and will populate the 
 // field values for the variable called from. All fields returned by the db will be populated,
 // but fields will be considered not set. Selects only the first line from the table.
-func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
+func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 	row := dbc.connection.QueryRow(t.buildSelectStr(true))
 	
-	fields := make([]interface{}, len(t.fieldNames))
-	fieldValues := make([]*interface{}, len(t.fieldNames))
+	fieldCount := len(t.fieldNames)
+	
+	if t.recid.Exists {
+		fieldCount = fieldCount + 1
+	}
+	
+	fields := make([]interface{}, fieldCount)
+	fieldValues := make([]*interface{}, fieldCount)
 	
 	for fId := range fields {
 		fields[fId] = &fieldValues[fId]
@@ -282,13 +295,12 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
 	err := row.Scan(fields...)	
 	
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		return false
+		return err
 	}
 	
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
-		if t.recid.Exists && fId == 1 {
+		if t.recid.Exists && fId == 0 {
 			t.recid.Value = value.(int64)
 			t.recid.IsSet = false
 		} else {
@@ -297,7 +309,7 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) bool {
 		}
 	}
 	
-	return true
+	return nil
 }
 
 // Builds and executes a select statement based on the field values that have been set using
@@ -315,8 +327,14 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	}	
 		
 	for rows.Next() {
-		fields := make([]interface{}, len(t.fieldNames))
-		fieldValues := make([]*interface{}, len(t.fieldNames))
+		fieldCount := len(t.fieldNames)
+	
+		if t.recid.Exists {
+			fieldCount++
+		}
+		
+		fields := make([]interface{}, fieldCount)
+		fieldValues := make([]*interface{}, fieldCount)
 		
 		for fId := range fields {
 			fields[fId] = &fieldValues[fId]
@@ -332,7 +350,7 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
-			if t.recid.Exists && fId == 1 {
+			if t.recid.Exists && fId == 0 {
 				t.recid.Value = value.(int64)
 				t.recid.IsSet = false
 			} else {
@@ -386,16 +404,119 @@ func (t DbTable) buildInsertStr() (string, error) {
 	
 	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
 	
+	// TODO testing
+	fmt.Printf("%v\n", stmtStr)
+	
 	return stmtStr, nil
 }
 
-// Builds anx executes an insert statement from the set field values
-func (t DbTable) DoInsert(dbc *DbConnection) (int64, error) {
+// Builds and executes an insert statement from the set field values
+func (t *DbTable) DoInsert(dbc *DbConnection) (int64, error) {
 	stmtStr, err := t.buildInsertStr()
 	
 	if err != nil {
 		return 0, err
 	}
 	
-	return dbc.Exec(stmtStr)
+	rows, err := dbc.Exec(stmtStr)
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	if t.recid.Exists && t.recid.AutoInc {
+		err = t.DoSelectFirstonly(dbc)
+	}
+	
+	if err != nil {
+		return rows, err
+	}
+	
+	return rows, nil
+}
+
+func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
+	var hasWhere bool
+	var whereStr string
+	
+	deleteStr := "DELETE FROM " + t.tableName	
+	
+	if useRecId {
+		whereStr = t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
+		hasWhere = true
+	} else {
+		for fId, isSet := range t.fieldValueSet {
+			if isSet {
+				hasWhere = true
+				if len(whereStr) != 0 {
+					whereStr = whereStr + " AND "
+				}
+				whereStr = whereStr + t.tableName + "." + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
+				
+			}
+		}
+		
+		if t.recid.Exists && t.recid.IsSet {
+			if len(whereStr) != 0 {
+				whereStr = whereStr + " AND "
+			}
+			whereStr = whereStr + t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
+		}
+	}
+	
+	if !hasWhere {
+		return "", fmt.Errorf("Delete must have a where clause")
+	}
+	
+	deleteStr = deleteStr + " WHERE " + whereStr
+	
+	// TODO testing
+	fmt.Printf("%v\n", deleteStr)
+	
+	return deleteStr, nil
+}
+
+// Deletes the selected record. If no record has previously been selected (recid has no value or it
+// has been set manually), an error will be returned. DoDelete will only work for tables that have
+// the recid field. To make sure a record has been selected, check if it has a recid. 
+func (t *DbTable) DoDelete(dbcon *DbConnection) error {
+	deleteStr, err := t.buildDeleteStr(true)
+	
+	if err != nil {
+		return err
+	}
+	
+	rows, err := dbcon.Exec(deleteStr)
+	
+	if err != nil {
+		return err
+	}
+	
+	if rows != 1 {
+		return fmt.Errorf("Something went wrong, %i lines deleted. SQL query: %s", rows, deleteStr)
+	}
+	
+	t.ClearFields()
+	
+	return nil
+}
+
+// Deletes all lines using the values that have been set in the fields. This will also include the recid
+// if it exists and has been set. This can be used for deleting records in bulk or deleting a specific 
+// record by its recid without first selecting it. Will return the number of rows deleted or an error if
+// something went wrong. If no rows fit the criteria, 0 and no error will be returned. 
+func (t *DbTable) DoDeleteWhere(dbcon *DbConnection) (int64, error) {
+	deleteStr, err := t.buildDeleteStr(false)
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	rows, err := dbcon.Exec(deleteStr)
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return rows, nil
 }

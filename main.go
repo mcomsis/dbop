@@ -11,8 +11,8 @@ func newUsersTable() dbop.DbTable {
 	var usersTable 	dbop.DbTable
 	var recid		[2]bool
 	
-	fieldNames := make([]string, 6)
-	fieldTypes := make([]string, 6)
+	fieldNames := make([]string, 5)
+	fieldTypes := make([]string, 5)
 	
 	fieldNames[0] = "name"
 	fieldNames[1] = "registered"
@@ -38,48 +38,27 @@ func main() {
 	dbcon.Open(dbString)
 	
 	usersTable := newUsersTable()
-	
-	//usersTable.SetFieldValue("id","19")
-	//usersTable.SetFieldValue("name","zaraza")
-	//usersTable.ClearField("id")
-	
-	//res := usersTable.DoSelectFirstonly(&dbcon)
-	
 	/*
+	// testing DoInsert()
+	usersTable.SetFieldValue("name", "testing 3 three")
+	usersTable.SetFieldValue("registered", "2012-06-22 06:12:12")
+	usersTable.SetFieldValue("role", "3")
+	usersTable.SetFieldValue("rating", "2.7")
+	usersTable.SetFieldValue("yr", "2011")
+	usersTable.DoInsert(&dbcon)
 	
-	if res {
-		fmt.Printf("ok\n")
-	} else {
-		fmt.Printf("nok\n") 
-	}
-	
-	
-	val := usersTable.GetFieldValue("registered")
+	recid, _ := usersTable.RecId() 
+	fmt.Printf("recid = %v\n", recid)
 	*/
 	
-	//var usersTableList []dbop.DbTable
-	/*
-	usersTableList, err := usersTable.DoSelect(&dbcon)
+	// testing DoSelectFirstony()
+	usersTable.SetFieldValue("role","3")
+	err := usersTable.DoSelectFirstonly(&dbcon)
 	
 	if err != nil {
-		panic (err) 
+		fmt.Printf("%v\n", err)
 	}
 	
-	for id := range usersTableList {
-		recid := usersTableList[id].GetFieldValue("name")
-		fmt.Printf("name = %s, id = %s\n", recid, id)
-	} 
-	*/
-	
-	usersTable.SetFieldValue("name", "omgomg")
-	r, err := usersTable.DoInsert(&dbcon)
-	
-	if err != nil {
-		fmt.Printf("%s\n", err)
-	} else {
-		fmt.Printf("%s\n", r)
-	}
-	
-	fmt.Printf("kaut kas\n")  
+	fmt.Printf("%v\n",usersTable.GetFieldValue("name"))
 }
 
