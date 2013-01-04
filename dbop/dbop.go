@@ -374,11 +374,11 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
 			if t.recid.Exists && fId == 0 {
-				t.recid.Value = value.(int64)
-				t.recid.IsSet = false
+				tableRow.recid.Value = value.(int64)
+				tableRow.recid.IsSet = false
 			} else {
-				t.fieldValue[fId-offset] = anytypeToStr(value)
-				t.fieldValueSet[fId-offset] = false
+				tableRow.fieldValue[fId-offset] = anytypeToStr(value)
+				tableRow.fieldValueSet[fId-offset] = false
 			}
 		}
 				

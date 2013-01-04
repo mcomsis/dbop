@@ -72,12 +72,12 @@ func main() {
 	
 	// testing DoSelectFirstony()
 	usersTable.SetFieldValue("role","3")
-	tbl, err := usersTable.DoSelect(&dbcon)
+	err := usersTable.DoSelectFirstonly(&dbcon)
 	
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
-	
+	/*
 	t := tbl[0]
 	
 	recid, set := t.RecId()
@@ -85,7 +85,9 @@ func main() {
 	fmt.Printf("recid = %v set = %v\n",recid, set)
 	
 	t.SetRecId(27)
-	
+	recid, set = t.RecId()
+	*/
+	recid, set := usersTable.RecId()
 	fmt.Printf("recid = %v set = %v\n",recid, set)
 }
 
