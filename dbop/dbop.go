@@ -35,7 +35,7 @@ func toStmtStr(value string, valueType string) string {
 func anytypeToStr(value interface{}) string {
 	switch value.(type) {
 		case int, int8, int16, int32, int64:
-			return strconv.FormatInt(value.(int64),10)
+			return strconv.FormatInt(value.(int64),10) // TODO change this
 		case uint, uint8, uint16, uint32, uint64:
 			return strconv.FormatUint(value.(uint64), 10)
 		case float32, float64:
@@ -227,10 +227,6 @@ func (dbc *DbConnection) Exec(queryStr string) (int64, error) {
 	rowsAffected, _ := result.RowsAffected()
 	
 	return rowsAffected, nil
-}
-
-func (dbc *DbConnection) QueryRow(queryStr string) Row {
-// TODO build this
 }
 
 func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
@@ -480,6 +476,10 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 // has been set manually), an error will be returned. DoDelete will only work for tables that have
 // the recid field. To make sure a record has been selected, check if it has a recid. 
 func (t *DbTable) DoDelete(dbcon *DbConnection) error {
+	if !t.recid.Exists || t.recid.IsSet || t.recid.Value == 0 {
+		panic("No record has been selected, cant DoDelete()!")
+	}
+	
 	deleteStr, err := t.buildDeleteStr(true)
 	
 	if err != nil {

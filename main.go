@@ -3,6 +3,7 @@ package main
 import (
 		"fmt"		
 		"./dbop"
+		//"time"	
 )
 
 const dbString = "test/root/"
@@ -38,27 +39,46 @@ func main() {
 	dbcon.Open(dbString)
 	
 	usersTable := newUsersTable()
+	
 	/*
 	// testing DoInsert()
-	usersTable.SetFieldValue("name", "testing 3 three")
-	usersTable.SetFieldValue("registered", "2012-06-22 06:12:12")
-	usersTable.SetFieldValue("role", "3")
-	usersTable.SetFieldValue("rating", "2.7")
+	usersTable.SetFieldValue("name", "testing 1 one")
+	usersTable.SetFieldValue("registered", "2012-04-13 09:44:12")
+	usersTable.SetFieldValue("role", "1")
+	usersTable.SetFieldValue("rating", "0.7")
 	usersTable.SetFieldValue("yr", "2011")
-	usersTable.DoInsert(&dbcon)
+	_, err := usersTable.DoInsert(&dbcon)
+	
+	if err != nil {
+		fmt.Printf("err = %v\n", err)
+	}
 	
 	recid, _ := usersTable.RecId() 
 	fmt.Printf("recid = %v\n", recid)
+	fmt.Printf("done\n")
+	*/
+	
+	/*
+	// testing DoDeleteWhere()
+	usersTable.SetFieldValue("role", "1")
+	i, err := usersTable.DoDeleteWhere(&dbcon)
+	
+	if err != nil {
+		fmt.Printf("err=%v\n",err)
+	} else {
+		fmt.Printf("lines=%v\n",i)
+	}
 	*/
 	
 	// testing DoSelectFirstony()
 	usersTable.SetFieldValue("role","3")
-	err := usersTable.DoSelectFirstonly(&dbcon)
+	tbls, err := usersTable.DoSelect(&dbcon)
 	
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
 	
-	fmt.Printf("%v\n",usersTable.GetFieldValue("name"))
+	fmt.Printf("%v\n",len(tbls))
+		
 }
 
