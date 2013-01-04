@@ -43,7 +43,7 @@ func anytypeToStr(value interface{}) string { // TODO this needs to be sored for
 		case bool:
 			return strconv.FormatBool(value.(bool))
 		default:
-			return fmt.Sprintf("%v", value)
+			return fmt.Sprintf("%s", value)
 	}
 	
 	return ""
@@ -68,7 +68,7 @@ type DbTable struct {
 
 // Returns the recid value of the table and the IsSet value. IsSet will be true if the 
 // value has been set and not read, it will be false if the value is empty or has been read from db
-// The methd will panic if recid does not exist for this table.
+// The method will panic if recid does not exist for this table.
 func (t DbTable) RecId() (int64, bool) {
 	if !t.recid.Exists {
 		panic ("Rec id doesn't exist for this table")
@@ -80,7 +80,7 @@ func (t DbTable) RecId() (int64, bool) {
 // Sets the value for recid to be used when executing db operations. This value will be included in ther
 // where clause. If 0 is passed in, the method will clear the recid value. This method also must be used
 // if recid field is not set as auto_increment in the database and must be maintained in the application.
-// The methd will panic if recid does not exist for this table.
+// The method will panic if recid does not exist for this table.
 func (t *DbTable) SetRecId(recId int64) {
 	if !t.recid.Exists {
 		panic ("Rec id dosn't exist for this table")
@@ -273,7 +273,15 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 // field values for the variable called from. All fields returned by the db will be populated,
 // but fields will be considered not set. Selects only the first line from the table.
 func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
-	row := dbc.connection.QueryRow(t.buildSelectStr(true))
+	var offset int
+	
+	queryStr, err := t.buildSelectStr(true)
+	
+	if err != nil {
+		return err
+	}
+	
+	row := dbc.connection.QueryRow(queryStr)
 	
 	fieldCount := len(t.fieldNames)
 	
@@ -288,10 +296,16 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 		fields[fId] = &fieldValues[fId]
 	}
 	
-	err := row.Scan(fields...)	
+	err = row.Scan(fields...)	
 	
 	if err != nil {
 		return err
+	}
+	
+	if t.recid.Exists {
+		offset = 1
+	} else {
+		offset = 0
 	}
 	
 	for fId := range fieldValues {
@@ -300,8 +314,8 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 			t.recid.Value = value.(int64)
 			t.recid.IsSet = false
 		} else {
-			t.fieldValue[fId] = anytypeToStr(value)
-			t.fieldValueSet[fId] = false
+			t.fieldValue[fId-offset] = anytypeToStr(value)
+			t.fieldValueSet[fId-offset] = false
 		}
 	}
 	
@@ -315,8 +329,15 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	var retRows 	[]DbTable
 	var counter		int
+	var offset		int
 	
-	rows, err := dbc.connection.Query(t.buildSelectStr(false))
+	queryStr, err := t.buildSelectStr(false)
+	
+	if  err!= nil {
+		return nil, err
+	}
+	
+	rows, err := dbc.connection.Query(queryStr)
 	
 	if err != nil {
 		return nil, err
@@ -336,7 +357,7 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 			fields[fId] = &fieldValues[fId]
 		}
 	
-		err := rows.Scan(fields...)		
+		err = rows.Scan(fields...)		
 		
 		if err != nil {
 			return nil, err
@@ -344,14 +365,20 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		
 		tableRow := t.newTableInstance()
 		
+		if t.recid.Exists {
+			offset = 1
+		} else {
+			offset = 0
+		}
+		
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
 			if t.recid.Exists && fId == 0 {
 				t.recid.Value = value.(int64)
 				t.recid.IsSet = false
 			} else {
-				t.fieldValue[fId] = anytypeToStr(value)
-				t.fieldValueSet[fId] = false
+				t.fieldValue[fId-offset] = anytypeToStr(value)
+				t.fieldValueSet[fId-offset] = false
 			}
 		}
 				
