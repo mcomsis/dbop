@@ -77,17 +77,17 @@ func main() {
 	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
+	
+	fmt.Printf("recid = %v\n",usersTable.GetFieldValue("rating"))
 	/*
-	t := tbl[0]
+	var c float32
+	var z float64
 	
-	recid, set := t.RecId()
+	c = 1.1
 	
-	fmt.Printf("recid = %v set = %v\n",recid, set)
+	//z = c.(float64)
 	
-	t.SetRecId(27)
-	recid, set = t.RecId()
+	fmt.Printf("%v\n",z)
 	*/
-	recid, set := usersTable.RecId()
-	fmt.Printf("recid = %v set = %v\n",recid, set)
 }
 

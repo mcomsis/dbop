@@ -32,14 +32,14 @@ func toStmtStr(value string, valueType string) string {
 	return ""
 }
 
-func anytypeToStr(value interface{}) string { // TODO this needs to be sored for float32
+func anytypeToStr(value interface{}) string {
 	switch value.(type) {
 		case int, int8, int16, int32, int64:
 			return strconv.FormatInt(value.(int64),10) 
 		case uint, uint8, uint16, uint32, uint64:
 			return strconv.FormatUint(value.(uint64), 10)
 		case float32, float64:
-			return strconv.FormatFloat(value.(float64), 'f', -1, 64)
+			return strconv.FormatFloat(value.(float64), 'f', -1, 32)
 		case bool:
 			return strconv.FormatBool(value.(bool))
 		default:
