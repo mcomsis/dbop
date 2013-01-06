@@ -9,7 +9,7 @@ import (
 		_ "github.com/ziutek/mymysql/godrv"
 		"strconv"
 )
-
+/*
 type Table interface {
 	InitTable(tableName string, fieldNames []string, fieldTypes []string)
 	ResetTable()
@@ -19,6 +19,7 @@ type Table interface {
 	GetFieldValue(fieldName string) string
 	SetFieldValue(fieldName string, fieldValue string) bool
 }
+*/
 
 func toStmtStr(value string, valueType string) string {
 	switch valueType {
@@ -54,6 +55,11 @@ type RecId struct {
 	Exists 	bool
 	AutoInc bool
 	IsSet	bool
+}
+
+type DbUpdateField struct {
+	FieldName 	string
+	Value		string
 }
 
 // Defines the database table base type
@@ -148,6 +154,17 @@ func (t DbTable) GetFieldNameList() []string {
 // Returns a slice of all the field types for the initiated table
 func (t DbTable) GetFieldTypeList() []string {
 	return t.fieldTypes
+}
+
+// Return field db type from a field name
+func (t DbTable) GetFieldType(fieldName string) string {
+	for fId, name := range t.fieldNames {
+		if name == fieldName {
+			return t.fieldTypes[fId]
+		}
+	}
+	
+	panic("Field not found")
 }
 
 // Returns a the table name of the initiated table
@@ -252,6 +269,7 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 			whereStr = whereStr + " AND "
 		}
 		whereStr = whereStr + t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
+		hasWhere = true
 	}
 	
 	if hasWhere {
@@ -504,7 +522,7 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 // the recid field. To make sure a record has been selected, check if it has a recid. 
 func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 	if !t.recid.Exists || t.recid.IsSet || t.recid.Value == 0 {
-		panic("No record has been selected, cant DoDelete()!")
+		return fmt.Errorf("No record has been selected, cant DoDelete()!")
 	}
 	
 	deleteStr, err := t.buildDeleteStr(true)
@@ -544,6 +562,128 @@ func (t *DbTable) DoDeleteWhere(dbcon *DbConnection) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	
+	return rows, nil
+}
+
+func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (string, error) {
+	var hasWhere 	bool
+	var hasSet 		bool
+	var whereStr 	string
+	var setStr 		string
+	
+	if useRecId && (!t.recid.Exists || t.recid.Value == 0) {
+		return "", fmt.Errorf("Record has not been selected or the table does not use recid field.")
+	}
+	
+	queryStr := "UDATE " + t.tableName + " SET "
+	
+	for fId, isSet := range t.fieldValueSet {
+		if isSet {
+			if len(setStr) > 0 {
+				setStr = setStr + ", "
+			}
+			
+			setStr = setStr + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
+			hasSet = true
+		}
+	}
+	
+	if !hasSet {
+		return "", fmt.Errorf("No fields have been set for update!")
+	}
+	
+	if useRecId {
+		whereStr = t.tableName + ".recid" + anytypeToStr(t.recid.Value)
+		hasWhere = true
+	} else {
+		if whereFields == nil || len(whereFields) == 0 {
+			return "", fmt.Errorf("Missing where conditions for update.")
+		}
+		
+		for _, field := range whereFields {
+			if len(whereStr) != 0 {
+				whereStr = whereStr + ", "
+			}
+			
+			whereStr = whereStr + field.FieldName + "." + toStmtStr(field.Value, t.GetFieldType(field.FieldName))
+			hasWhere = true
+		}
+	}
+	
+	if !hasWhere {
+		return "", fmt.Errorf("No condictions in the WHERE clause. recid is not used and condictions not passed in.")
+	}
+	
+	queryStr = queryStr + setStr + " WHERE " + whereStr
+	
+	return queryStr, nil
+} 
+
+// Updates the selected with the values set for fields. Cannot be used for tables that don't have 
+// recid. A record must be selected before the DoUpdate can be called. 
+func (t *DbTable) DoUpdate(dbcon *DbConnection) error {
+	if !t.recid.Exists {
+		return fmt.Errorf("This table does not have recid.")
+	}
+	
+	if t.recid.IsSet {
+		return fmt.Errorf("Record must be selected, setting the recid value will not work.")
+	}
+	
+	if t.recid.Value == 0 {
+		return fmt.Errorf("Record has not been selected")
+	}
+	
+	queryStr, err := t.buildUpdateStr(true, nil)
+	
+	if err != nil {
+		return err
+	}
+	
+	rows, err := dbcon.Exec(queryStr)
+	
+	if err != nil {
+		return err
+	}
+	
+	if rows != 1 {
+		return fmt.Errorf("Something went wrong, %v lines where updated.", rows)
+	}
+	
+	for fId, isSet := range t.fieldValueSet {
+		if isSet {
+			t.fieldValueSet[fId] = false
+		}
+	}
+	
+	return nil
+}
+
+// This table will update all records that meet the criteria specified by the whereFields slice.
+// Values to be updated must be set via the SetFieldValue() method. Updated row count will be returned.
+func (t *DbTable) DoUpdateWhere(dbcon *DbConnection, whereFields []DbUpdateField) (int64, error) {
+	if whereFields == nil {
+		return 0, fmt.Errorf("whereFields value can't be nil.")
+	}
+	
+	if len(whereFields) == 0 {
+		return 0, fmt.Errorf("At least one field must be specified in the where clause.")
+	}
+	
+	queryStr, err := t.buildUpdateStr(false, whereFields)
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	rows, err := dbcon.Exec(queryStr)
+	
+	if err != nil {
+		return rows, err
+	}
+	
+	t.ClearFields()
 	
 	return rows, nil
 }
