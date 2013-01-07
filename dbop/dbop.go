@@ -9,17 +9,6 @@ import (
 		_ "github.com/ziutek/mymysql/godrv"
 		"strconv"
 )
-/*
-type Table interface {
-	InitTable(tableName string, fieldNames []string, fieldTypes []string)
-	ResetTable()
-	GetTableName() string
-	GetFieldNameList() []string
-	GetFieldTypeList() []string
-	GetFieldValue(fieldName string) string
-	SetFieldValue(fieldName string, fieldValue string) bool
-}
-*/
 
 func toStmtStr(value string, valueType string) string {
 	switch valueType {
@@ -202,6 +191,9 @@ func (t *DbTable) ClearFields() {
 		t.fieldValue[fId] = ""
 		t.fieldValueSet[fId] = false
 	}
+	
+	t.recid.Value = 0
+	t.recid.IsSet = false
 }
 
 // Clears the value of a field specified by the field name
@@ -212,6 +204,12 @@ func (t *DbTable) ClearField(fieldName string) bool {
 			t.fieldValueSet[fId] = false
 			return true
 		}
+	}
+	
+	if fieldName == "recid" {
+		t.recid.Value = 0
+		t.recid.IsSet = false
+		return true
 	}
 	
 	return false
@@ -279,9 +277,9 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 	if firstonly {
 		selectStr = selectStr + " LIMIT 1"
 	}
-	
-	// TODO testing
-	fmt.Printf("%v\n", selectStr)
+
+// for debugging	
+//	fmt.Printf("%v\n", selectStr)
 	
 	return selectStr, nil
 }
@@ -445,24 +443,28 @@ func (t DbTable) buildInsertStr() (string, error) {
 	
 	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
 	
-	// TODO testing
-	fmt.Printf("%v\n", stmtStr)
+// for debugging
+//	fmt.Printf("%v\n", stmtStr)
 	
 	return stmtStr, nil
 }
 
 // Builds and executes an insert statement from the set field values
-func (t *DbTable) DoInsert(dbc *DbConnection) (int64, error) {
+func (t *DbTable) DoInsert(dbc *DbConnection) error {
 	stmtStr, err := t.buildInsertStr()
 	
 	if err != nil {
-		return 0, err
+		return err
 	}
 	
 	rows, err := dbc.Exec(stmtStr)
 	
 	if err != nil {
-		return 0, err
+		return err
+	}
+	
+	if rows != 1 {
+		return fmt.Errorf("Something went wrong, insert affected %v rows.", rows)
 	}
 	
 	if t.recid.Exists && t.recid.AutoInc {
@@ -470,10 +472,10 @@ func (t *DbTable) DoInsert(dbc *DbConnection) (int64, error) {
 	}
 	
 	if err != nil {
-		return rows, err
+		return err
 	}
 	
-	return rows, nil
+	return nil
 }
 
 func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
@@ -511,8 +513,8 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 	
 	deleteStr = deleteStr + " WHERE " + whereStr
 	
-	// TODO testing
-	fmt.Printf("%v\n", deleteStr)
+// for debugging
+//	fmt.Printf("%v\n", deleteStr)
 	
 	return deleteStr, nil
 }
@@ -576,7 +578,7 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 		return "", fmt.Errorf("Record has not been selected or the table does not use recid field.")
 	}
 	
-	queryStr := "UDATE " + t.tableName + " SET "
+	queryStr := "UPDATE " + t.tableName + " SET "
 	
 	for fId, isSet := range t.fieldValueSet {
 		if isSet {
@@ -584,7 +586,7 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 				setStr = setStr + ", "
 			}
 			
-			setStr = setStr + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
+			setStr = setStr + "`" + t.fieldNames[fId] + "`" + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
 			hasSet = true
 		}
 	}
@@ -594,7 +596,7 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 	}
 	
 	if useRecId {
-		whereStr = t.tableName + ".recid" + anytypeToStr(t.recid.Value)
+		whereStr = t.tableName + ".recid = " + anytypeToStr(t.recid.Value)
 		hasWhere = true
 	} else {
 		if whereFields == nil || len(whereFields) == 0 {
@@ -606,7 +608,7 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 				whereStr = whereStr + ", "
 			}
 			
-			whereStr = whereStr + field.FieldName + "." + toStmtStr(field.Value, t.GetFieldType(field.FieldName))
+			whereStr = whereStr + t.tableName + "." + field.FieldName + " = " + toStmtStr(field.Value, t.GetFieldType(field.FieldName))
 			hasWhere = true
 		}
 	}
@@ -617,6 +619,9 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 	
 	queryStr = queryStr + setStr + " WHERE " + whereStr
 	
+// for debugging
+//	fmt.Printf("%v\n", queryStr)
+
 	return queryStr, nil
 } 
 
