@@ -4,61 +4,61 @@
 package dbop
 
 import (
-		"fmt"
-		"database/sql"
-		_ "github.com/ziutek/mymysql/godrv"
-		"strconv"
+	"database/sql"
+	"fmt"
+	_ "github.com/ziutek/mymysql/godrv"
+	"strconv"
 )
 
 func toStmtStr(value string, valueType string) string {
 	switch valueType {
-		case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT", "DOUBLE", "YEAR":
-			return value
-			
-		case "DATE","DATETIME", "TIMESTAPM", "TIME", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
-			return "'" + value + "'"
+	case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT", "DOUBLE", "YEAR":
+		return value
+
+	case "DATE", "DATETIME", "TIMESTAPM", "TIME", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
+		return "'" + value + "'"
 	}
-	
+
 	return ""
 }
 
 func anytypeToStr(value interface{}) string {
 	switch value.(type) {
-		case int, int8, int16, int32, int64:
-			return strconv.FormatInt(value.(int64),10) 
-		case uint, uint8, uint16, uint32, uint64:
-			return strconv.FormatUint(value.(uint64), 10)
-		case float32, float64:
-			return strconv.FormatFloat(value.(float64), 'f', -1, 32)
-		case bool:
-			return strconv.FormatBool(value.(bool))
-		default:
-			return fmt.Sprintf("%s", value)
+	case int, int8, int16, int32, int64:
+		return strconv.FormatInt(value.(int64), 10)
+	case uint, uint8, uint16, uint32, uint64:
+		return strconv.FormatUint(value.(uint64), 10)
+	case float32, float64:
+		return strconv.FormatFloat(value.(float64), 'f', -1, 32)
+	case bool:
+		return strconv.FormatBool(value.(bool))
+	default:
+		return fmt.Sprintf("%s", value)
 	}
-	
+
 	return ""
 }
 
 type RecId struct {
-	Value 	int64
-	Exists 	bool
+	Value   int64
+	Exists  bool
 	AutoInc bool
-	IsSet	bool
+	IsSet   bool
 }
 
 type DbUpdateField struct {
-	FieldName 	string
-	Value		string
+	FieldName string
+	Value     string
 }
 
 // Defines the database table base type
 type DbTable struct {
-	tableName 		string
-	fieldNames		[]string
-	fieldTypes		[]string
-	fieldValue 		[]string
-	fieldValueSet   []bool
-	recid			RecId
+	tableName     string
+	fieldNames    []string
+	fieldTypes    []string
+	fieldValue    []string
+	fieldValueSet []bool
+	recid         RecId
 }
 
 // Returns the recid value of the table and the IsSet value. IsSet will be true if the 
@@ -66,9 +66,9 @@ type DbTable struct {
 // The method will panic if recid does not exist for this table.
 func (t DbTable) RecId() (int64, bool) {
 	if !t.recid.Exists {
-		panic ("Rec id doesn't exist for this table")
+		panic("Rec id doesn't exist for this table")
 	}
-	
+
 	return t.recid.Value, t.recid.IsSet
 }
 
@@ -78,9 +78,9 @@ func (t DbTable) RecId() (int64, bool) {
 // The method will panic if recid does not exist for this table.
 func (t *DbTable) SetRecId(recId int64) {
 	if !t.recid.Exists {
-		panic ("Rec id dosn't exist for this table")
+		panic("Rec id dosn't exist for this table")
 	}
-	
+
 	if recId != 0 {
 		t.recid.Value = recId
 		t.recid.IsSet = true
@@ -91,35 +91,35 @@ func (t *DbTable) SetRecId(recId int64) {
 }
 
 func (t DbTable) newTableInstance() DbTable {
-	var tbl 		DbTable
-	var fieldNames	[]string
-	var fieldTypes 	[]string
-	var recid		[2]bool
-	
+	var tbl DbTable
+	var fieldNames []string
+	var fieldTypes []string
+	var recid [2]bool
+
 	fieldNames = make([]string, len(t.fieldNames))
 	copy(fieldNames, t.fieldNames)
-	
+
 	fieldTypes = make([]string, len(t.fieldTypes))
 	copy(fieldTypes, t.fieldTypes)
-	
+
 	recid[0] = t.recid.Exists
 	recid[1] = t.recid.AutoInc
-	
+
 	tbl.InitTable(t.tableName, fieldNames, fieldTypes, recid)
-	
-	return tbl;
+
+	return tbl
 }
 
 // Initiates the base type with info from a specific table in the database.
 // recid is a field and a unique index for that field that can be created on the table
 // for easily performing DoUpdate and DoDelete operations after selecting a single record
 func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []string, recid [2]bool) {
-	t.tableName 	= tableName
-	t.fieldNames 	= fieldNames
-	t.fieldTypes 	= fieldTypes
-	t.fieldValue 	= make([]string, len(fieldTypes))
+	t.tableName = tableName
+	t.fieldNames = fieldNames
+	t.fieldTypes = fieldTypes
+	t.fieldValue = make([]string, len(fieldTypes))
 	t.fieldValueSet = make([]bool, len(fieldTypes))
-	t.recid.Exists	= recid[0]
+	t.recid.Exists = recid[0]
 	if t.recid.Exists {
 		t.recid.AutoInc = recid[1]
 	}
@@ -127,12 +127,12 @@ func (t *DbTable) InitTable(tableName string, fieldNames []string, fieldTypes []
 
 // Resets the table variable for initiating as a different database table
 func (t *DbTable) ResetTable() {
-	t.tableName 	= ""
-	t.fieldNames 	= nil
-	t.fieldTypes 	= nil
+	t.tableName = ""
+	t.fieldNames = nil
+	t.fieldTypes = nil
 	t.recid.AutoInc = false
-	t.recid.Exists	= false
-	t.recid.Value 	= 0
+	t.recid.Exists = false
+	t.recid.Value = 0
 }
 
 // Returns a slice of all the field names for the initiated table
@@ -152,7 +152,7 @@ func (t DbTable) GetFieldType(fieldName string) string {
 			return t.fieldTypes[fId]
 		}
 	}
-	
+
 	panic("Field not found")
 }
 
@@ -168,7 +168,7 @@ func (t DbTable) GetFieldValue(fieldName string) string {
 			return t.fieldValue[fId]
 		}
 	}
-	
+
 	return ""
 }
 
@@ -178,10 +178,10 @@ func (t *DbTable) SetFieldValue(fieldName string, fieldValue string) bool {
 		if fieldName == fn {
 			t.fieldValue[fId] = fieldValue
 			t.fieldValueSet[fId] = true
-			return true;
+			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -191,7 +191,7 @@ func (t *DbTable) ClearFields() {
 		t.fieldValue[fId] = ""
 		t.fieldValueSet[fId] = false
 	}
-	
+
 	t.recid.Value = 0
 	t.recid.IsSet = false
 }
@@ -205,13 +205,13 @@ func (t *DbTable) ClearField(fieldName string) bool {
 			return true
 		}
 	}
-	
+
 	if fieldName == "recid" {
 		t.recid.Value = 0
 		t.recid.IsSet = false
 		return true
 	}
-	
+
 	return false
 }
 
@@ -223,34 +223,34 @@ type DbConnection struct {
 // Opens a database connection
 func (dbc *DbConnection) Open(connectionStr string) {
 	con, err := sql.Open("mymysql", connectionStr)
-	
+
 	if err != nil {
 		panic(err)
 	}
-	
+
 	dbc.connection = con
 }
 
 // Executes a custom sql statement
 func (dbc *DbConnection) Exec(queryStr string) (int64, error) {
 	result, err := dbc.connection.Exec(queryStr)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	rowsAffected, _ := result.RowsAffected()
-	
+
 	return rowsAffected, nil
 }
 
 func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
-	var selectStr 	string
-	var whereStr 	string
-	var hasWhere 	bool
-	
+	var selectStr string
+	var whereStr string
+	var hasWhere bool
+
 	selectStr = "SELECT * FROM " + t.tableName
-	
+
 	for fId, isSet := range t.fieldValueSet {
 		if isSet {
 			hasWhere = true
@@ -258,10 +258,10 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 				whereStr = whereStr + " AND "
 			}
 			whereStr = whereStr + t.tableName + "." + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
-			
+
 		}
 	}
-	
+
 	if t.recid.Exists && t.recid.IsSet {
 		if len(whereStr) != 0 {
 			whereStr = whereStr + " AND "
@@ -269,18 +269,18 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 		whereStr = whereStr + t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
 		hasWhere = true
 	}
-	
+
 	if hasWhere {
 		selectStr = selectStr + " WHERE " + whereStr
 	}
-	
+
 	if firstonly {
 		selectStr = selectStr + " LIMIT 1"
 	}
 
-// for debugging	
-//	fmt.Printf("%v\n", selectStr)
-	
+	// for debugging	
+	//	fmt.Printf("%v\n", selectStr)
+
 	return selectStr, nil
 }
 
@@ -290,40 +290,40 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 // but fields will be considered not set. Selects only the first line from the table.
 func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 	var offset int
-	
+
 	queryStr, err := t.buildSelectStr(true)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	row := dbc.connection.QueryRow(queryStr)
-	
+
 	fieldCount := len(t.fieldNames)
-	
+
 	if t.recid.Exists {
 		fieldCount = fieldCount + 1
 	}
-	
+
 	fields := make([]interface{}, fieldCount)
 	fieldValues := make([]*interface{}, fieldCount)
-	
+
 	for fId := range fields {
 		fields[fId] = &fieldValues[fId]
 	}
-	
-	err = row.Scan(fields...)	
-	
+
+	err = row.Scan(fields...)
+
 	if err != nil {
 		return err
 	}
-	
+
 	if t.recid.Exists {
 		offset = 1
 	} else {
 		offset = 0
 	}
-	
+
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
@@ -334,7 +334,7 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 			t.fieldValueSet[fId-offset] = false
 		}
 	}
-	
+
 	return nil
 }
 
@@ -343,50 +343,50 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 // the selected table rows. If no lines are found, will return a 0 sized slice. Will return 
 // nil value and an error if a problem was encountered.
 func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
-	var retRows 	[]DbTable
-	var counter		int
-	var offset		int
-	
+	var retRows []DbTable
+	var counter int
+	var offset int
+
 	queryStr, err := t.buildSelectStr(false)
-	
-	if  err!= nil {
-		return nil, err
-	}
-	
-	rows, err := dbc.connection.Query(queryStr)
-	
+
 	if err != nil {
 		return nil, err
-	}	
-		
+	}
+
+	rows, err := dbc.connection.Query(queryStr)
+
+	if err != nil {
+		return nil, err
+	}
+
 	for rows.Next() {
 		fieldCount := len(t.fieldNames)
-	
+
 		if t.recid.Exists {
 			fieldCount++
 		}
-		
+
 		fields := make([]interface{}, fieldCount)
 		fieldValues := make([]*interface{}, fieldCount)
-		
+
 		for fId := range fields {
 			fields[fId] = &fieldValues[fId]
 		}
-	
-		err = rows.Scan(fields...)		
-		
+
+		err = rows.Scan(fields...)
+
 		if err != nil {
 			return nil, err
 		}
-		
+
 		tableRow := t.newTableInstance()
-		
+
 		if t.recid.Exists {
 			offset = 1
 		} else {
 			offset = 0
 		}
-		
+
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
 			if t.recid.Exists && fId == 0 {
@@ -397,23 +397,23 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 				tableRow.fieldValueSet[fId-offset] = false
 			}
 		}
-				
+
 		retRows = append(retRows, tableRow)
 		counter++
 	}
-	
+
 	rows.Close()
-	
-	return retRows, nil	
+
+	return retRows, nil
 }
 
 func (t DbTable) buildInsertStr() (string, error) {
-	var stmtStr		string
-	var stmtFields 	string
-	var stmtValues	string
-	
+	var stmtStr string
+	var stmtFields string
+	var stmtValues string
+
 	stmtStr = "INSERT INTO " + t.tableName + " "
-	
+
 	for fId := range t.fieldNames {
 		if t.fieldValueSet[fId] {
 			if len(stmtFields) == 0 {
@@ -423,67 +423,67 @@ func (t DbTable) buildInsertStr() (string, error) {
 				stmtFields = stmtFields + ","
 				stmtValues = stmtValues + ","
 			}
-			
+
 			stmtFields = stmtFields + t.fieldNames[fId]
 			stmtValues = stmtValues + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
 		}
 	}
-	
+
 	if t.recid.Exists && !t.recid.AutoInc {
 		stmtFields = stmtFields + "recid, "
 		stmtValues = stmtFields + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
 	}
-	
+
 	if len(stmtFields) == 0 {
 		return "", fmt.Errorf("No fields set!")
 	} else {
 		stmtFields = stmtFields + ")"
 		stmtValues = stmtValues + ")"
 	}
-	
+
 	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
-	
-// for debugging
-//	fmt.Printf("%v\n", stmtStr)
-	
+
+	// for debugging
+	//	fmt.Printf("%v\n", stmtStr)
+
 	return stmtStr, nil
 }
 
 // Builds and executes an insert statement from the set field values
 func (t *DbTable) DoInsert(dbc *DbConnection) error {
 	stmtStr, err := t.buildInsertStr()
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	rows, err := dbc.Exec(stmtStr)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if rows != 1 {
 		return fmt.Errorf("Something went wrong, insert affected %v rows.", rows)
 	}
-	
+
 	if t.recid.Exists && t.recid.AutoInc {
 		err = t.DoSelectFirstonly(dbc)
 	}
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
 func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 	var hasWhere bool
 	var whereStr string
-	
-	deleteStr := "DELETE FROM " + t.tableName	
-	
+
+	deleteStr := "DELETE FROM " + t.tableName
+
 	if useRecId {
 		whereStr = t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
 		hasWhere = true
@@ -495,10 +495,10 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 					whereStr = whereStr + " AND "
 				}
 				whereStr = whereStr + t.tableName + "." + t.fieldNames[fId] + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
-				
+
 			}
 		}
-		
+
 		if t.recid.Exists && t.recid.IsSet {
 			if len(whereStr) != 0 {
 				whereStr = whereStr + " AND "
@@ -506,16 +506,16 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 			whereStr = whereStr + t.tableName + ".recid = " + toStmtStr(anytypeToStr(t.recid.Value), "BIGINT")
 		}
 	}
-	
+
 	if !hasWhere {
 		return "", fmt.Errorf("Delete must have a where clause")
 	}
-	
+
 	deleteStr = deleteStr + " WHERE " + whereStr
-	
-// for debugging
-//	fmt.Printf("%v\n", deleteStr)
-	
+
+	// for debugging
+	//	fmt.Printf("%v\n", deleteStr)
+
 	return deleteStr, nil
 }
 
@@ -526,25 +526,25 @@ func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 	if !t.recid.Exists || t.recid.IsSet || t.recid.Value == 0 {
 		return fmt.Errorf("No record has been selected, cant DoDelete()!")
 	}
-	
+
 	deleteStr, err := t.buildDeleteStr(true)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	rows, err := dbcon.Exec(deleteStr)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if rows != 1 {
 		return fmt.Errorf("Something went wrong, %i lines deleted. SQL query: %s", rows, deleteStr)
 	}
-	
+
 	t.ClearFields()
-	
+
 	return nil
 }
 
@@ -554,47 +554,47 @@ func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 // something went wrong. If no rows fit the criteria, 0 and no error will be returned. 
 func (t *DbTable) DoDeleteWhere(dbcon *DbConnection) (int64, error) {
 	deleteStr, err := t.buildDeleteStr(false)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	rows, err := dbcon.Exec(deleteStr)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return rows, nil
 }
 
 func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (string, error) {
-	var hasWhere 	bool
-	var hasSet 		bool
-	var whereStr 	string
-	var setStr 		string
-	
+	var hasWhere bool
+	var hasSet bool
+	var whereStr string
+	var setStr string
+
 	if useRecId && (!t.recid.Exists || t.recid.Value == 0) {
 		return "", fmt.Errorf("Record has not been selected or the table does not use recid field.")
 	}
-	
+
 	queryStr := "UPDATE " + t.tableName + " SET "
-	
+
 	for fId, isSet := range t.fieldValueSet {
 		if isSet {
 			if len(setStr) > 0 {
 				setStr = setStr + ", "
 			}
-			
+
 			setStr = setStr + "`" + t.fieldNames[fId] + "`" + " = " + toStmtStr(t.fieldValue[fId], t.fieldTypes[fId])
 			hasSet = true
 		}
 	}
-	
+
 	if !hasSet {
 		return "", fmt.Errorf("No fields have been set for update!")
 	}
-	
+
 	if useRecId {
 		whereStr = t.tableName + ".recid = " + anytypeToStr(t.recid.Value)
 		hasWhere = true
@@ -602,28 +602,28 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 		if whereFields == nil || len(whereFields) == 0 {
 			return "", fmt.Errorf("Missing where conditions for update.")
 		}
-		
+
 		for _, field := range whereFields {
 			if len(whereStr) != 0 {
 				whereStr = whereStr + ", "
 			}
-			
+
 			whereStr = whereStr + t.tableName + "." + field.FieldName + " = " + toStmtStr(field.Value, t.GetFieldType(field.FieldName))
 			hasWhere = true
 		}
 	}
-	
+
 	if !hasWhere {
 		return "", fmt.Errorf("No condictions in the WHERE clause. recid is not used and condictions not passed in.")
 	}
-	
+
 	queryStr = queryStr + setStr + " WHERE " + whereStr
-	
-// for debugging
-//	fmt.Printf("%v\n", queryStr)
+
+	// for debugging
+	//	fmt.Printf("%v\n", queryStr)
 
 	return queryStr, nil
-} 
+}
 
 // Updates the selected with the values set for fields. Cannot be used for tables that don't have 
 // recid. A record must be selected before the DoUpdate can be called. 
@@ -631,37 +631,37 @@ func (t *DbTable) DoUpdate(dbcon *DbConnection) error {
 	if !t.recid.Exists {
 		return fmt.Errorf("This table does not have recid.")
 	}
-	
+
 	if t.recid.IsSet {
 		return fmt.Errorf("Record must be selected, setting the recid value will not work.")
 	}
-	
+
 	if t.recid.Value == 0 {
 		return fmt.Errorf("Record has not been selected")
 	}
-	
+
 	queryStr, err := t.buildUpdateStr(true, nil)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	rows, err := dbcon.Exec(queryStr)
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if rows != 1 {
 		return fmt.Errorf("Something went wrong, %v lines where updated.", rows)
 	}
-	
+
 	for fId, isSet := range t.fieldValueSet {
 		if isSet {
 			t.fieldValueSet[fId] = false
 		}
 	}
-	
+
 	return nil
 }
 
@@ -671,24 +671,24 @@ func (t *DbTable) DoUpdateWhere(dbcon *DbConnection, whereFields []DbUpdateField
 	if whereFields == nil {
 		return 0, fmt.Errorf("whereFields value can't be nil.")
 	}
-	
+
 	if len(whereFields) == 0 {
 		return 0, fmt.Errorf("At least one field must be specified in the where clause.")
 	}
-	
+
 	queryStr, err := t.buildUpdateStr(false, whereFields)
-	
+
 	if err != nil {
 		return 0, err
 	}
-	
+
 	rows, err := dbcon.Exec(queryStr)
-	
+
 	if err != nil {
 		return rows, err
 	}
-	
+
 	t.ClearFields()
-	
+
 	return rows, nil
 }
