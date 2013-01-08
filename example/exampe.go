@@ -2,7 +2,7 @@ package main
 
 import (
 		"fmt"		
-		"./dbop"
+		"github.com/mcomsis/dbop"
 )
 
 const dbString = "test/root/"
