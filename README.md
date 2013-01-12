@@ -11,4 +11,5 @@ Check the example, read the comments.
 	$ go get github.com/mcomsis/dbop
 
 Uses mymysql driver. 
+
 	$ go get github.com/ziutek/mymysql
