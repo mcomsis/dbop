@@ -40,7 +40,7 @@ func anytypeToStr(value interface{}) string {
 }
 
 type RecId struct {
-	Value   int64
+	Value   uint64
 	Exists  bool
 	AutoInc bool
 	IsSet   bool
@@ -64,7 +64,7 @@ type DbTable struct {
 // Returns the recid value of the table and the IsSet value. IsSet will be true if the 
 // value has been set and not read, it will be false if the value is empty or has been read from db
 // The method will panic if recid does not exist for this table.
-func (t DbTable) RecId() (int64, bool) {
+func (t DbTable) RecId() (uint64, bool) {
 	if !t.recid.Exists {
 		panic("Rec id doesn't exist for this table")
 	}
@@ -76,7 +76,7 @@ func (t DbTable) RecId() (int64, bool) {
 // where clause. If 0 is passed in, the method will clear the recid value. This method also must be used
 // if recid field is not set as auto_increment in the database and must be maintained in the application.
 // The method will panic if recid does not exist for this table.
-func (t *DbTable) SetRecId(recId int64) {
+func (t *DbTable) SetRecId(recId uint64) {
 	if !t.recid.Exists {
 		panic("Rec id dosn't exist for this table")
 	}
@@ -327,7 +327,7 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
-			t.recid.Value = value.(int64)
+			t.recid.Value = value.(uint64)
 			t.recid.IsSet = false
 		} else {
 			t.fieldValue[fId-offset] = anytypeToStr(value)
@@ -390,7 +390,7 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
 			if t.recid.Exists && fId == 0 {
-				tableRow.recid.Value = value.(int64)
+				tableRow.recid.Value = value.(uint64)
 				tableRow.recid.IsSet = false
 			} else {
 				tableRow.fieldValue[fId-offset] = anytypeToStr(value)
