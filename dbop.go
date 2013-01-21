@@ -327,7 +327,8 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
-			t.recid.Value = value.(uint64)
+			int64value := value.(int64)
+			t.recid.Value = uint64(int64value)
 			t.recid.IsSet = false
 		} else {
 			t.fieldValue[fId-offset] = anytypeToStr(value)
@@ -390,7 +391,8 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
 			if t.recid.Exists && fId == 0 {
-				tableRow.recid.Value = value.(uint64)
+				int64value := value.(int64)
+				tableRow.recid.Value = uint64(int64value)
 				tableRow.recid.IsSet = false
 			} else {
 				tableRow.fieldValue[fId-offset] = anytypeToStr(value)
