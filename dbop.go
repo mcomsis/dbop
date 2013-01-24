@@ -279,7 +279,7 @@ func (t DbTable) buildSelectStr(firstonly bool) (string, error) {
 	}
 
 	// for debugging	
-	fmt.Printf("%v\n", selectStr)
+	//fmt.Printf("%v\n", selectStr)
 
 	return selectStr, nil
 }
@@ -446,7 +446,7 @@ func (t DbTable) buildInsertStr() (string, error) {
 	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
 
 	// for debugging
-	fmt.Printf("%v\n", stmtStr)
+	//fmt.Printf("%v\n", stmtStr)
 
 	return stmtStr, nil
 }
@@ -516,7 +516,7 @@ func (t DbTable) buildDeleteStr(useRecId bool) (string, error) {
 	deleteStr = deleteStr + " WHERE " + whereStr
 
 	// for debugging
-	fmt.Printf("%v\n", deleteStr)
+	//fmt.Printf("%v\n", deleteStr)
 
 	return deleteStr, nil
 }
@@ -622,7 +622,7 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField) (str
 	queryStr = queryStr + setStr + " WHERE " + whereStr
 
 	// for debugging
-	fmt.Printf("%v\n", queryStr)
+	//fmt.Printf("%v\n", queryStr)
 
 	return queryStr, nil
 }
