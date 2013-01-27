@@ -39,6 +39,10 @@ func anytypeToStr(value interface{}) string {
 	return ""
 }
 
+func RemoveTimezoneFromStr(value string) string {
+	return value[0:len(value)-10]
+}
+
 type RecId struct {
 	Value   uint64
 	Exists  bool
