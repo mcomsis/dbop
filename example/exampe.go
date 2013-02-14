@@ -57,7 +57,7 @@ func newUsersTable() dbop.DbTable {
 
 func main() {
 	var dbcon dbop.DbConnection
-	dbcon.Open(dbString)
+	dbcon.Open(dbString, false)
 
 	usersTable := newUsersTable()
 
