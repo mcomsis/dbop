@@ -226,7 +226,7 @@ type DbConnection struct {
 }
 
 // Opens a database connection
-func (dbc *DbConnection) Open(connectionStr string, debug bool = false) {
+func (dbc *DbConnection) Open(connectionStr string, debug bool) {
 	con, err := sql.Open("mymysql", connectionStr)
 
 	if err != nil {
@@ -285,8 +285,9 @@ func (t DbTable) buildSelectStr(firstonly bool, debug bool) (string, error) {
 	}
 
 	// for debugging
-	if debug	
+	if debug {
 		fmt.Printf("%v\n", selectStr)
+	}
 
 	return selectStr, nil
 }
@@ -453,8 +454,9 @@ func (t DbTable) buildInsertStr(debug bool) (string, error) {
 	stmtStr = stmtStr + stmtFields + " VALUES " + stmtValues
 
 	// for debugging
-	if debug
+	if debug {
 		fmt.Printf("%v\n", stmtStr)
+	}
 
 	return stmtStr, nil
 }
@@ -524,8 +526,9 @@ func (t DbTable) buildDeleteStr(useRecId bool, debug bool) (string, error) {
 	deleteStr = deleteStr + " WHERE " + whereStr
 
 	// for debugging
-	if debug
+	if debug {
 		fmt.Printf("%v\n", deleteStr)
+	}
 
 	return deleteStr, nil
 }
@@ -538,7 +541,7 @@ func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 		return fmt.Errorf("No record has been selected, cant DoDelete()!")
 	}
 
-	deleteStr, err := t.buildDeleteStr(true, dbc.debug)
+	deleteStr, err := t.buildDeleteStr(true, dbcon.debug)
 
 	if err != nil {
 		return err
@@ -564,7 +567,7 @@ func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 // record by its recid without first selecting it. Will return the number of rows deleted or an error if
 // something went wrong. If no rows fit the criteria, 0 and no error will be returned. 
 func (t *DbTable) DoDeleteWhere(dbcon *DbConnection) (int64, error) {
-	deleteStr, err := t.buildDeleteStr(false, dbc.debug)
+	deleteStr, err := t.buildDeleteStr(false, dbcon.debug)
 
 	if err != nil {
 		return 0, err
@@ -631,8 +634,9 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField, debu
 	queryStr = queryStr + setStr + " WHERE " + whereStr
 
 	// for debugging
-	if debug
+	if debug {
 		fmt.Printf("%v\n", queryStr)
+	}
 
 	return queryStr, nil
 }
@@ -652,7 +656,7 @@ func (t *DbTable) DoUpdate(dbcon *DbConnection) error {
 		return fmt.Errorf("Record has not been selected")
 	}
 
-	queryStr, err := t.buildUpdateStr(true, nil, dbc.debug)
+	queryStr, err := t.buildUpdateStr(true, nil, dbcon.debug)
 
 	if err != nil {
 		return err
@@ -688,7 +692,7 @@ func (t *DbTable) DoUpdateWhere(dbcon *DbConnection, whereFields []DbUpdateField
 		return 0, fmt.Errorf("At least one field must be specified in the where clause.")
 	}
 
-	queryStr, err := t.buildUpdateStr(false, whereFields, dbc.debug)
+	queryStr, err := t.buildUpdateStr(false, whereFields, dbcon.debug)
 
 	if err != nil {
 		return 0, err
