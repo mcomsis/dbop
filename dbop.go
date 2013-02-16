@@ -222,11 +222,12 @@ func (t *DbTable) ClearField(fieldName string) bool {
 // Database connection type used when executing a db operation
 type DbConnection struct {
 	connection *sql.DB
+	timeZoneOffset string
 	debug bool
 }
 
 // Opens a database connection
-func (dbc *DbConnection) Open(connectionStr string, debug bool) {
+func (dbc *DbConnection) Open(connectionStr string, debug bool, timeZoneOffset string) {
 	con, err := sql.Open("mymysql", connectionStr)
 
 	if err != nil {
@@ -234,7 +235,14 @@ func (dbc *DbConnection) Open(connectionStr string, debug bool) {
 	}
 
 	dbc.connection = con
+	dbc.timeZoneOffset = timeZoneOffset
 	dbc.debug = debug
+	
+	_, err = dbc.Exec(fmt.Sprintf("set time_zone = '%s'", dbc.timeZoneOffset))
+	
+	if err != nil {
+		fmt.Printf("Time zone failed. %s", err)
+	}
 }
 
 // Executes a custom sql statement

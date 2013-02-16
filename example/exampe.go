@@ -57,7 +57,7 @@ func newUsersTable() dbop.DbTable {
 
 func main() {
 	var dbcon dbop.DbConnection
-	dbcon.Open(dbString, false)
+	dbcon.Open(dbString, false, "+00:00") // for UTC the time zone offset is 0 hours
 
 	usersTable := newUsersTable()
 
