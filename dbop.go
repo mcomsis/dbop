@@ -258,6 +258,11 @@ func (dbc *DbConnection) Exec(queryStr string) (int64, error) {
 	return rowsAffected, nil
 }
 
+// Close the database connection
+func (dbc *DbConnection) Close() error {
+	return dbc.connection.Close()
+}
+
 func (t DbTable) buildSelectStr(firstonly bool, debug bool) (string, error) {
 	var selectStr string
 	var whereStr string
