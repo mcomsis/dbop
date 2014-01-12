@@ -351,12 +351,12 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
+		strValue := fmt.Sprintf("%s", value)
 		if t.recid.Exists && fId == 0 {
-			int64value := value.(int64)
-			t.recid.Value = uint64(int64value)
+			t.recid.Value, _ = strconv.ParseUint(strValue, 10, 64)
 			t.recid.IsSet = false
 		} else {
-			t.fieldValue[fId-offset] = anytypeToStr(value)
+			t.fieldValue[fId-offset] = strValue
 			t.fieldValueSet[fId-offset] = false
 		}
 	}
@@ -415,12 +415,12 @@ func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 
 		for fId := range fieldValues {
 			value := *fieldValues[fId]
+			strValue := fmt.Sprintf("%s", value)
 			if t.recid.Exists && fId == 0 {
-				int64value := value.(int64)
-				tableRow.recid.Value = uint64(int64value)
+				tableRow.recid.Value, _ = strconv.ParseUint(strValue, 10, 64)
 				tableRow.recid.IsSet = false
 			} else {
-				tableRow.fieldValue[fId-offset] = anytypeToStr(value)
+				tableRow.fieldValue[fId-offset] = strValue
 				tableRow.fieldValueSet[fId-offset] = false
 			}
 		}
