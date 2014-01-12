@@ -324,7 +324,7 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 
 	row := dbc.connection.QueryRow(queryStr)
 
-	fmt.Printf("%+v", row) // TODO testing
+	fmt.Printf("row:\n%+v\n", row) // TODO testing
 
 	fieldCount := len(t.fieldNames)
 
@@ -351,13 +351,13 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 		offset = 0
 	}
 
-	fmt.Printf("%+v", fields)      // TODO testing
-	fmt.Printf("%+v", fieldValues) // TODO testing
+	fmt.Printf("fields:\n%+v\n", fields)           // TODO testing
+	fmt.Printf("fieldValues:\n%+v\n", fieldValues) // TODO testing
 
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
-			fmt.Printf("%+v", value) // TODO testing
+			fmt.Printf("value:\n%+v\n", value) // TODO testing
 			int64value := value.(int64)
 			t.recid.Value = uint64(int64value)
 			t.recid.IsSet = false
