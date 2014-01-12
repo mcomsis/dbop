@@ -5,7 +5,7 @@ package dbop
 
 import (
 	"database/sql"
-	"fmt" // TODO testing
+	"fmt"
 	_ "github.com/ziutek/mymysql/godrv"
 	"strconv"
 )
@@ -324,8 +324,6 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 
 	row := dbc.connection.QueryRow(queryStr)
 
-	fmt.Printf("row:\n%+v\n", row) // TODO testing
-
 	fieldCount := len(t.fieldNames)
 
 	if t.recid.Exists {
@@ -351,13 +349,9 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 		offset = 0
 	}
 
-	fmt.Printf("fields:\n%+v\n", fields)           // TODO testing
-	fmt.Printf("fieldValues:\n%+v\n", fieldValues) // TODO testing
-
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
-			fmt.Printf("value:\n%+v\n", value) // TODO testing
 			int64value := value.(int64)
 			t.recid.Value = uint64(int64value)
 			t.recid.IsSet = false
