@@ -1,21 +1,25 @@
 // Package dbop includes the most commonly used db operations - select, insert, delete
-// in an easy to use manner without the need to use or know anything about the underlying 
+// in an easy to use manner without the need to use or know anything about the underlying
 // sql queries.
 package dbop
 
 import (
 	"database/sql"
-	"fmt"
+	"fmt" // TODO testing
 	_ "github.com/ziutek/mymysql/godrv"
 	"strconv"
 )
 
 func toStmtStr(value string, valueType string) string {
 	switch valueType {
-	case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT", "INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT", "DOUBLE", "YEAR":
+	case "BIT", "TINYINT", "BOOL", "BOOLEAN", "SMALLINT", "MEDIUMINT",
+		"INT", "INTEGER", "BIGINT", "SERIAL", "DECIMAL", "DEC", "FLOAT",
+		"DOUBLE", "YEAR":
 		return value
 
-	case "DATE", "DATETIME", "TIMESTAMP", "TIME", "CHAR", "VARCHAR", "BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
+	case "DATE", "DATETIME", "TIMESTAMP", "TIME", "CHAR", "VARCHAR",
+		"BINARY", "VARBINARY", "TINYBLOB", "TINYTEXT", "BLOB", "TEXT",
+		"MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT", "ENUM", "SET":
 		return "'" + value + "'"
 	}
 
@@ -40,7 +44,7 @@ func anytypeToStr(value interface{}) string {
 }
 
 func RemoveTimezoneFromStr(value string) string {
-	return value[0:len(value)-10]
+	return value[0 : len(value)-10]
 }
 
 type RecId struct {
@@ -65,7 +69,7 @@ type DbTable struct {
 	recid         RecId
 }
 
-// Returns the recid value of the table and the IsSet value. IsSet will be true if the 
+// Returns the recid value of the table and the IsSet value. IsSet will be true if the
 // value has been set and not read, it will be false if the value is empty or has been read from db
 // The method will panic if recid does not exist for this table.
 func (t DbTable) RecId() (uint64, bool) {
@@ -221,9 +225,9 @@ func (t *DbTable) ClearField(fieldName string) bool {
 
 // Database connection type used when executing a db operation
 type DbConnection struct {
-	connection *sql.DB
+	connection     *sql.DB
 	timeZoneOffset string
-	debug bool
+	debug          bool
 }
 
 // Opens a database connection
@@ -237,9 +241,9 @@ func (dbc *DbConnection) Open(connectionStr string, debug bool, timeZoneOffset s
 	dbc.connection = con
 	dbc.timeZoneOffset = timeZoneOffset
 	dbc.debug = debug
-	
+
 	_, err = dbc.Exec(fmt.Sprintf("set time_zone = '%s'", dbc.timeZoneOffset))
-	
+
 	if err != nil {
 		fmt.Printf("Time zone failed. %s", err)
 	}
@@ -306,7 +310,7 @@ func (t DbTable) buildSelectStr(firstonly bool, debug bool) (string, error) {
 }
 
 // Builds and executes a select statement based on the field values that have been set using
-// using the SetFieldValue() function. Will return true if successfull and will populate the 
+// using the SetFieldValue() function. Will return true if successfull and will populate the
 // field values for the variable called from. All fields returned by the db will be populated,
 // but fields will be considered not set. Selects only the first line from the table.
 func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
@@ -319,6 +323,8 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 	}
 
 	row := dbc.connection.QueryRow(queryStr)
+
+	fmt.Printf("%+v", row) // TODO testing
 
 	fieldCount := len(t.fieldNames)
 
@@ -345,9 +351,13 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 		offset = 0
 	}
 
+	fmt.Printf("%+v", fields)      // TODO testing
+	fmt.Printf("%+v", fieldValues) // TODO testing
+
 	for fId := range fieldValues {
 		value := *fieldValues[fId]
 		if t.recid.Exists && fId == 0 {
+			fmt.Printf("%+v", value) // TODO testing
 			int64value := value.(int64)
 			t.recid.Value = uint64(int64value)
 			t.recid.IsSet = false
@@ -362,7 +372,7 @@ func (t *DbTable) DoSelectFirstonly(dbc *DbConnection) error {
 
 // Builds and executes a select statement based on the field values that have been set using
 // using the SetFieldValue() function. Will return a slice of DbTable objects that represent
-// the selected table rows. If no lines are found, will return a 0 sized slice. Will return 
+// the selected table rows. If no lines are found, will return a 0 sized slice. Will return
 // nil value and an error if a problem was encountered.
 func (t DbTable) DoSelect(dbc *DbConnection) ([]DbTable, error) {
 	var retRows []DbTable
@@ -548,7 +558,7 @@ func (t DbTable) buildDeleteStr(useRecId bool, debug bool) (string, error) {
 
 // Deletes the selected record. If no record has previously been selected (recid has no value or it
 // has been set manually), an error will be returned. DoDelete will only work for tables that have
-// the recid field. To make sure a record has been selected, check if it has a recid. 
+// the recid field. To make sure a record has been selected, check if it has a recid.
 func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 	if !t.recid.Exists || t.recid.IsSet || t.recid.Value == 0 {
 		return fmt.Errorf("No record has been selected, cant DoDelete()!")
@@ -576,9 +586,9 @@ func (t *DbTable) DoDelete(dbcon *DbConnection) error {
 }
 
 // Deletes all lines using the values that have been set in the fields. This will also include the recid
-// if it exists and has been set. This can be used for deleting records in bulk or deleting a specific 
+// if it exists and has been set. This can be used for deleting records in bulk or deleting a specific
 // record by its recid without first selecting it. Will return the number of rows deleted or an error if
-// something went wrong. If no rows fit the criteria, 0 and no error will be returned. 
+// something went wrong. If no rows fit the criteria, 0 and no error will be returned.
 func (t *DbTable) DoDeleteWhere(dbcon *DbConnection) (int64, error) {
 	deleteStr, err := t.buildDeleteStr(false, dbcon.debug)
 
@@ -654,8 +664,8 @@ func (t DbTable) buildUpdateStr(useRecId bool, whereFields []DbUpdateField, debu
 	return queryStr, nil
 }
 
-// Updates the selected with the values set for fields. Cannot be used for tables that don't have 
-// recid. A record must be selected before the DoUpdate can be called. 
+// Updates the selected with the values set for fields. Cannot be used for tables that don't have
+// recid. A record must be selected before the DoUpdate can be called.
 func (t *DbTable) DoUpdate(dbcon *DbConnection) error {
 	if !t.recid.Exists {
 		return fmt.Errorf("This table does not have recid.")
